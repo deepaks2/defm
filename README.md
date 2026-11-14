@@ -55,6 +55,49 @@ uv pip install -e ".[notebooks]"
 pip install -e ".[notebooks]"
 ```
 
+### Intel XPU inference
+
+The `defm_resnet18` native inference path was validated on an Intel GPU (XPU)
+with the PyTorch XPU backend. XPU is opt-in; omitting `--device` preserves the
+original CPU default, and XPU inference does not fall back to CPU. Image
+preprocessing remains on the CPU; model inputs, parameters, and outputs are
+placed on XPU.
+
+**Requirements**
+
+- Python 3.12
+- PyTorch `2.15.0+xpu` and torchvision `0.29.2+xpu`
+- An Intel GPU with a working PyTorch XPU runtime
+- The `defm_resnet18` checkpoint from the
+  [DeFM Hugging Face repository](https://huggingface.co/leggedrobotics/defm)
+
+Create a separate XPU environment so the existing CUDA environment is
+unchanged, then install DeFM without replacing the XPU wheels:
+
+```bash
+python -m pip install \
+    --index-url https://download.pytorch.org/whl/xpu \
+    --extra-index-url https://pypi.org/simple \
+    torch==2.15.0+xpu torchvision==0.29.2+xpu
+python -m pip install -e . --no-deps
+```
+
+Run the repository's native ResNet-18 model with explicit XPU selection:
+
+```bash
+python scripts/inference.py \
+    --model defm_resnet18 \
+    --device xpu \
+    --input scripts/notebooks/example_images/cups/depth_000128.png
+```
+
+The validated smoke run loaded the repository-native checkpoint, kept model
+inputs and outputs on XPU, and produced finite global and dense features. The
+classification and segmentation benchmark suites were not run because their
+documented external datasets and training dependencies were not prepared.
+CUDA runtime regression was not run; the unchanged CPU path was checked.
+Reset scans found no reset signals, but kernel-log access was unavailable.
+
 ---
 
 <a id="quick-start"></a>
